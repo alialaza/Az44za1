@@ -1,459 +1,123 @@
 <!DOCTYPE html>
-
 <html lang="ar" dir="rtl">
-
 <head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Az44za Pro - الإصدار المستقر</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    
-
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
-
-
-    <script>
-
-        const firebaseConfig = {
-
-            apiKey: "AIzaSyAv3xsfgv6zzlBjrhy8Ji1Dj03SE1buqB0",
-
-            authDomain: "az44-2cc0a.firebaseapp.com",
-
-            projectId: "az44-2cc0a",
-
-            storageBucket: "az44-2cc0a.firebasestorage.app",
-
-            messagingSenderId: "404629280954",
-
-            appId: "1:404629280954:web:090ca5748acb24468b8a83"
-
-        };
-
-
-
-        firebase.initializeApp(firebaseConfig);
-
-        const db = firebase.firestore();
-
-
-
-        let allSales = [];
-
-        let currentTheme = 0;
-
-
-
-        // --- التنقل ---
-
-        function showPage(id) {
-
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-
-            document.getElementById(id).classList.add('active');
-
-            if(id === 'salesHistory') {
-
-                document.getElementById('searchInput').value = "";
-
-                renderSales(allSales);
-
-            }
-
-        }
-
-
-
-        // --- المظهر ---
-
-        function toggleTheme() {
-
-            const themes = ['', 'light-mode', 'blue-mode'];
-
-            currentTheme = (currentTheme + 1) % themes.length;
-
-            document.body.className = themes[currentTheme];
-
-        }
-
-
-
-        // --- المبيعات ---
-
-        async function saveSale() {
-
-            const user = document.getElementById('saleUser').value;
-
-            const pts = document.getElementById('salePts').value;
-
-            if(!user || !pts) return alert("أكمل البيانات");
-
-            await db.collection("sales").add({ user, pts: parseInt(pts), timestamp: Date.now(), dateStr: new Date().toLocaleDateString('ar-EG') });
-
-            alert("تم تسجيل البيعة ✅");
-
-            showPage('main');
-
-        }
-
-
-
-        // --- الديون ---
-
-        async function updateDebt(type) {
-
-            const name = document.getElementById('debtNameInput').value;
-
-            const amt = parseInt(document.getElementById('debtAmtInput').value);
-
-            if(!name || !amt) return alert("أدخل الاسم والمبلغ");
-
-            const finalAmt = type === 'pay' ? -amt : amt;
-
-            await db.collection("debts").add({ name, amt: finalAmt, timestamp: Date.now() });
-
-            alert("تم التحديث ✅");
-
-            showPage('debtsPage');
-
-        }
-
-
-
-        // --- الاستماع للبيانات ---
-
-        db.collection("sales").orderBy("timestamp", "desc").onSnapshot(snap => {
-
-            allSales = [];
-
-            snap.forEach(doc => allSales.push({id: doc.id, ...doc.data()}));
-
-            updateTotalAuto();
-
-        });
-
-
-
-        db.collection("debts").onSnapshot(snap => {
-
-            let total = 0; let grouped = {};
-
-            snap.forEach(doc => {
-
-                const d = doc.data(); total += d.amt;
-
-                grouped[d.name] = (grouped[d.name] || 0) + d.amt;
-
-            });
-
-            document.getElementById('grandTotalDebt').innerText = total.toLocaleString() + " د.ع";
-
-            document.getElementById('debtList').innerHTML = Object.keys(grouped).map(n => `
-
-                <div class="card" style="border-right:4px solid ${grouped[n]>0?'#e74c3c':'#27ae60'}">
-
-                    <span>${n}</span> <b>${grouped[n].toLocaleString()}</b>
-
-                </div>`).join('');
-
-        });
-
-
-
-        // --- عرض السجل والبحث ---
-
-        function renderSales(data) {
-
-            document.getElementById('salesLogList').innerHTML = data.map(s => `
-
-                <div class="card">
-
-                    <div style="display:flex; justify-content:space-between">
-
-                        <b>${s.user}</b> <span class="tag">${s.pts} نقطة</span>
-
-                    </div>
-
-                    <small>${s.dateStr}</small>
-
-                </div>`).join('');
-
-        }
-
-
-
-        function searchSales(val) {
-
-            renderSales(allSales.filter(s => s.user.includes(val)));
-
-        }
-
-
-
-        // --- الأرباح والحذف ---
-
-        function updateTotalAuto(days = null) {
-
-            let total = 0; let target = allSales;
-
-            if(days) {
-
-                const limit = Date.now() - (days * 24 * 60 * 60 * 1000);
-
-                target = allSales.filter(s => s.timestamp >= limit);
-
-            }
-
-            target.forEach(s => total += s.pts);
-
-            document.getElementById('profitResult').innerHTML = days ? `نقاط آخر ${days} يوم:<br><b>${total}</b>` : `إجمالي النقاط الكلية:<br><b>${total}</b>`;
-
-        }
-
-
-
-        async function deleteSalesByTime() {
-
-            const days = document.getElementById('delSelect').value;
-
-            if(days == 0 || !confirm(`حذف مبيعات آخر ${days} يوم؟`)) return;
-
-            const limit = Date.now() - (days * 24 * 60 * 60 * 1000);
-
-            const toDel = allSales.filter(s => s.timestamp >= limit);
-
-            for(let s of toDel) await db.collection("sales").doc(s.id).delete();
-
-            alert("تم الحذف ✅");
-
-        }
-
-
-
-        function copySales() {
-
-            let t = "سجل Az44za:\n"; allSales.forEach(s => t += `${s.user}: ${s.pts}\n`);
-
-            navigator.clipboard.writeText(t); alert("تم النسخ ✅");
-
-        }
-
-    </script>
-
-
-
-    <style>
-
-        :root { --bg: #000; --card: #111; --text: #fff; --primary: #007bff; }
-
-        body { background: var(--bg); color: var(--text); font-family: 'Cairo'; margin: 0; padding: 15px; transition: 0.3s; }
-
-        .light-mode { --bg: #f5f5f5; --card: #fff; --text: #222; }
-
-        .blue-mode { --bg: #0a192f; --card: #172a45; --text: #ccd6f6; }
-
-        .page { display: none; } .active { display: block; }
-
-        .card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 10px; }
-
-        .btn { background: var(--primary); color: #fff; border: none; padding: 15px; border-radius: 10px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
-
-        input, select { background: var(--card); border: 1px solid #333; color: var(--text); padding: 12px; width: 100%; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
-
-        .tag { border: 1px solid var(--primary); padding: 2px 8px; border-radius: 10px; font-size: 0.8em; }
-
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-
-    </style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Az44za Pro - لوحة التحكم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root { --bg: #000; --card: #111; --primary: #007bff; --text: #fff; }
+        body { background: var(--bg); color: var(--text); font-family: 'Cairo', sans-serif; margin: 0; padding: 15px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 10px 5px; border-bottom: 1px solid #222; }
+        .main-btn { background: var(--card); border: 1px solid var(--primary); border-radius: 15px; padding: 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.3s; text-decoration: none; color: white; }
+        .main-btn:active { transform: scale(0.97); background: #1a1a1a; }
+        .main-btn i { font-size: 20px; color: var(--primary); }
+        .page { display: none; } .active { display: block; }
+        .btn { background: var(--primary); color: #fff; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; font-family: 'Cairo'; }
+        input { background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 15px; width: 100%; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; font-family: 'Cairo'; }
+        .card { background: var(--card); border: 1px solid #222; border-radius: 12px; padding: 15px; margin-bottom: 10px; text-align: right; }
+    </style>
 </head>
-
 <body>
 
-
-
-    <div id="main" class="page active">
-
-        <div class="header">
-
-            <i class="fas fa-user-cog" style="font-size:24px" onclick="showPage('settings')"></i>
-
-            <h3>Az44za Pro</h3>
-
-            <i class="fas fa-sync" onclick="location.reload()"></i>
-
-        </div>
-
-        <div class="card" onclick="showPage('addSalePage')"><i class="fas fa-plus-circle"></i> إضافة بيع</div>
-
-        <div class="card" onclick="showPage('salesHistory')"><i class="fas fa-history"></i> السجل</div>
-
-        <div class="card" onclick="showPage('debtsPage')"><i class="fas fa-hand-holding-usd"></i> الديون</div>
-
-        <div class="card" onclick="showPage('profitsPage')"><i class="fas fa-chart-bar"></i> الأرباح والحذف</div>
-
-    </div>
-
-
-
-    <div id="salesHistory" class="page">
-
-        <div style="display:flex; gap:5px">
-
-            <input type="text" id="searchInput" placeholder="🔍 ابحث عن يوزر..." onkeyup="searchSales(this.value)">
-
-            <button class="btn" style="width:50px; margin:0" onclick="copySales()"><i class="fas fa-copy"></i></button>
-
-        </div>
-
-        <div id="salesLogList"></div>
-
-        <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
-
-    </div>
-
-
-
-    <div id="debtsPage" class="page">
-
-        <div class="card" style="background:#e74c3c; text-align:center">
-
-            <small>المبلغ الكلي المطلوب منك</small>
-
-            <h2 id="grandTotalDebt">0 د.ع</h2>
-
-        </div>
-
-        <div style="display:flex; gap:10px">
-
-            <button class="btn" onclick="openDebt('add')">إضافة (+)</button>
-
-            <button class="btn" style="background:#27ae60" onclick="openDebt('pay')">تسديد (-)</button>
-
-        </div>
-
-        <div id="debtList" style="margin-top:15px"></div>
-
-        <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
-
-    </div>
-
-
-
-    <div id="debtInputPage" class="page">
-
-        <h3 id="debtTitle"></h3>
-
-        <input id="debtNameInput" placeholder="اسم الشخص">
-
-        <input id="debtAmtInput" type="number" placeholder="المبلغ">
-
-        <button id="debtConfirmBtn" class="btn">تأكيد</button>
-
-        <button class="btn" style="background:#444" onclick="showPage('debtsPage')">إلغاء</button>
-
-    </div>
-
-
-
-    <div id="profitsPage" class="page">
-
-        <div class="card" style="text-align:center; background:var(--primary)">
-
-            <p id="profitResult">جاري التحميل...</p>
-
-        </div>
-
-        <label>إحصائية حسب المدة:</label>
-
-        <select onchange="updateTotalAuto(this.value)">
-
-            <option value="0">كل المبيعات</option>
-
-            <option value="7">آخر 7 أيام</option>
-
-            <option value="15">آخر 15 يوم</option>
-
-            <option value="30">آخر 30 يوم</option>
-
-        </select>
-
-        <hr style="border:0.5px solid #333">
-
-        <label>حذف مبيعات مدة معينة:</label>
-
-        <select id="delSelect">
-
-            <option value="0">اختر المدة</option>
-
-            <option value="7">حذف آخر 7 أيام</option>
-
-            <option value="30">حذف آخر 30 يوم</option>
-
-        </select>
-
-        <button class="btn" style="background:#dc3545" onclick="deleteSalesByTime()">تأكيد الحذف</button>
-
-        <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
-
-    </div>
-
-
-
-    <div id="addSalePage" class="page">
-
-        <h3>تسجيل بيعة</h3>
-
-        <input id="saleUser" placeholder="يوزر الشخص">
-
-        <input id="salePts" type="number" placeholder="عدد النقاط">
-
-        <button class="btn" onclick="saveSale()">تأكيد الحفظ</button>
-
-        <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
-
-    </div>
-
-
-
-    <div id="settings" class="page">
-
-        <h3>الإعدادات</h3>
-
-        <button class="btn" onclick="toggleTheme()">تغيير المظهر (ليلي/نهاري/أزرق)</button>
-
-        <button class="btn" onclick="alert('برمجة علي - Az44za')">معلومات المطور</button>
-
-        <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
-
-    </div>
-
-
-
-    <script>
-
-        function openDebt(type) {
-
-            showPage('debtInputPage');
-
-            document.getElementById('debtTitle').innerText = type==='add'?'إضافة دين جديد':'تسديد مبلغ';
-
-            document.getElementById('debtConfirmBtn').onclick = () => updateDebt(type);
-
-        }
-
-    </script>
-
+    <div id="main" class="page active">
+        <div class="header">
+            <i class="fas fa-user-circle" style="font-size:30px; cursor:pointer" onclick="showPage('settings')"></i>
+            <h3 style="margin:0">Az44za Pro</h3>
+            <i class="fas fa-sync" onclick="location.reload()" style="cursor:pointer"></i>
+        </div>
+
+        <div class="main-btn" onclick="showPage('addSale')">
+            <i class="fas fa-chevron-left"></i>
+            <span>إضافة بيع <i class="fas fa-plus-circle" style="margin-right:8px"></i></span>
+        </div>
+
+        <div class="main-btn" onclick="showPage('salesHistory')">
+            <i class="fas fa-chevron-left"></i>
+            <span>السجل <i class="fas fa-history" style="margin-right:8px"></i></span>
+        </div>
+
+        <div class="main-btn" onclick="showPage('debts')">
+            <i class="fas fa-chevron-left"></i>
+            <span>الديون <i class="fas fa-file-invoice-dollar" style="margin-right:8px"></i></span>
+        </div>
+
+        <div class="main-btn" onclick="showPage('stats')">
+            <i class="fas fa-chevron-left"></i>
+            <span>الأرباح والحذف <i class="fas fa-chart-line" style="margin-right:8px"></i></span>
+        </div>
+    </div>
+
+    <div id="addSale" class="page card">
+        <h3>إضافة عملية بيع</h3>
+        <input id="userName" placeholder="اسم العميل">
+        <input id="points" type="number" placeholder="عدد النقاط">
+        <button class="btn" onclick="saveData()">حفظ البيانات</button>
+        <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
+    </div>
+
+    <div id="salesHistory" class="page card">
+        <h3>سجل المبيعات</h3>
+        <div id="list">جاري التحميل...</div>
+        <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
+    </div>
+
+    <div id="settings" class="page card">
+        <h3>الإعدادات</h3>
+        <p>مرحباً بك يا علي في لوحة التحكم الخاصة بك.</p>
+        <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
+    </div>
+
+    <script>
+        // إعدادات Firebase الخاصة بك
+        const firebaseConfig = {
+            apiKey: "AIzaSyAv3xsfgv6zzlBjrhy8Ji1Dj03SE1buqB0",
+            authDomain: "az44-2cc0a.firebaseapp.com",
+            projectId: "az44-2cc0a",
+            storageBucket: "az44-2cc0a.firebasestorage.app",
+            messagingSenderId: "404629280954",
+            appId: "1:404629280954:web:090ca5748acb24468b8a83"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        function showPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        async function saveData() {
+            const user = document.getElementById('userName').value;
+            const pts = document.getElementById('points').value;
+            if(!user || !pts) return alert("يرجى ملء الحقول");
+            await db.collection("sales").add({
+                user: user,
+                pts: pts,
+                time: Date.now(),
+                date: new Date().toLocaleDateString('ar-EG')
+            });
+            alert("تم الحفظ بنجاح ✅");
+            document.getElementById('userName').value = "";
+            document.getElementById('points').value = "";
+            showPage('main');
+        }
+
+        db.collection("sales").orderBy("time", "desc").onSnapshot(snap => {
+            let html = "";
+            snap.forEach(doc => {
+                const s = doc.data();
+                html += `<div class="card" style="border-color:#333">
+                            <b>${s.user}</b>: ${s.pts} نقطة <br>
+                            <small style="color:gray">${s.date}</small>
+                         </div>`;
+            });
+            document.getElementById('list').innerHTML = html || "لا توجد مبيعات حالياً";
+        });
+    </script>
 </body>
-
 </html>
