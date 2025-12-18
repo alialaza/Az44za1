@@ -6,75 +6,84 @@
     <title>Az44za Pro - لوحة التحكم</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
         :root { --bg: #000; --card: #111; --primary: #007bff; --text: #fff; }
-        body { background: var(--bg); color: var(--text); font-family: 'Cairo', sans-serif; margin: 0; padding: 15px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 10px 5px; border-bottom: 1px solid #222; }
-        .main-btn { background: var(--card); border: 1px solid var(--primary); border-radius: 15px; padding: 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.3s; text-decoration: none; color: white; }
-        .main-btn:active { transform: scale(0.97); background: #1a1a1a; }
-        .main-btn i { font-size: 20px; color: var(--primary); }
-        .page { display: none; } .active { display: block; }
+        body { background: var(--bg); color: var(--text); font-family: 'Cairo', sans-serif; margin: 0; padding: 15px; overflow-x: hidden; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 10px; border-bottom: 1px solid #222; }
+        .main-btn { background: var(--card); border: 1px solid var(--primary); border-radius: 15px; padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; color: white; transition: 0.3s; }
+        .main-btn:active { transform: scale(0.95); background: #1a1a1a; }
+        .main-btn i { font-size: 22px; color: var(--primary); }
+        .page { display: none; animation: fadeIn 0.3s; } 
+        .active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .btn { background: var(--primary); color: #fff; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; font-family: 'Cairo'; }
-        input { background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 15px; width: 100%; border-radius: 10px; margin-bottom: 10px; box-sizing: border-box; font-family: 'Cairo'; }
-        .card { background: var(--card); border: 1px solid #222; border-radius: 12px; padding: 15px; margin-bottom: 10px; text-align: right; }
+        input { background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 15px; width: 100%; border-radius: 10px; margin-bottom: 12px; box-sizing: border-box; font-family: 'Cairo'; font-size: 16px; }
+        .card { background: var(--card); border: 1px solid #222; border-radius: 12px; padding: 15px; margin-bottom: 10px; }
+        .stat-box { background: #222; border-radius: 15px; padding: 20px; text-align: center; margin-bottom: 20px; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
     <div id="main" class="page active">
         <div class="header">
-            <i class="fas fa-user-circle" style="font-size:30px; cursor:pointer" onclick="showPage('settings')"></i>
+            <i class="fas fa-user-circle" style="font-size:30px" onclick="showPage('settings')"></i>
             <h3 style="margin:0">Az44za Pro</h3>
-            <i class="fas fa-sync" onclick="location.reload()" style="cursor:pointer"></i>
+            <i class="fas fa-sync" onclick="location.reload()"></i>
         </div>
+        <div class="main-btn" onclick="showPage('addSale')"> <i class="fas fa-chevron-left"></i> <span>إضافة بيع <i class="fas fa-plus-circle" style="margin-right:8px"></i></span> </div>
+        <div class="main-btn" onclick="showPage('history')"> <i class="fas fa-chevron-left"></i> <span>سجل المبيعات <i class="fas fa-history" style="margin-right:8px"></i></span> </div>
+        <div class="main-btn" onclick="showPage('debtsPage')"> <i class="fas fa-chevron-left"></i> <span>الديون <i class="fas fa-file-invoice-dollar" style="margin-right:8px"></i></span> </div>
+        <div class="main-btn" onclick="showPage('statsPage')"> <i class="fas fa-chevron-left"></i> <span>الأرباح والحذف <i class="fas fa-chart-line" style="margin-right:8px"></i></span> </div>
+    </div>
 
-        <div class="main-btn" onclick="showPage('addSale')">
-            <i class="fas fa-chevron-left"></i>
-            <span>إضافة بيع <i class="fas fa-plus-circle" style="margin-right:8px"></i></span>
-        </div>
-
-        <div class="main-btn" onclick="showPage('salesHistory')">
-            <i class="fas fa-chevron-left"></i>
-            <span>السجل <i class="fas fa-history" style="margin-right:8px"></i></span>
-        </div>
-
-        <div class="main-btn" onclick="showPage('debts')">
-            <i class="fas fa-chevron-left"></i>
-            <span>الديون <i class="fas fa-file-invoice-dollar" style="margin-right:8px"></i></span>
-        </div>
-
-        <div class="main-btn" onclick="showPage('stats')">
-            <i class="fas fa-chevron-left"></i>
-            <span>الأرباح والحذف <i class="fas fa-chart-line" style="margin-right:8px"></i></span>
+    <div id="addSale" class="page">
+        <div class="card">
+            <h3 style="text-align:center">تسجيل بيعة جديدة</h3>
+            <input id="uName" placeholder="اسم العميل (اليوزر)">
+            <input id="uPoints" type="number" placeholder="عدد النقاط">
+            <button class="btn" onclick="saveToFirebase()">حفظ العملية ✅</button>
+            <button class="btn" style="background:#444" onclick="showPage('main')">رجوع للرئيسية</button>
         </div>
     </div>
 
-    <div id="addSale" class="page card">
-        <h3>إضافة عملية بيع</h3>
-        <input id="userName" placeholder="اسم العميل">
-        <input id="points" type="number" placeholder="عدد النقاط">
-        <button class="btn" onclick="saveData()">حفظ البيانات</button>
+    <div id="history" class="page">
+        <h3>سجل المبيعات</h3>
+        <div id="logContent">جاري تحميل البيانات...</div>
         <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
     </div>
 
-    <div id="salesHistory" class="page card">
-        <h3>سجل المبيعات</h3>
-        <div id="list">جاري التحميل...</div>
+    <div id="debtsPage" class="page">
+        <div class="stat-box" style="border-color: #e74c3c;">
+            <p style="color: #e74c3c; margin:0">إجمالي الديون المطلوبة</p>
+            <h2 id="totalDebtDisplay" style="margin:10px 0">0 د.ع</h2>
+        </div>
+        <div class="card">
+            <p style="text-align:center; color:gray">قائمة الديون المفصلة ستظهر هنا</p>
+        </div>
+        <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
+    </div>
+
+    <div id="statsPage" class="page">
+        <div class="stat-box" style="border-color: #2ecc71;">
+            <p style="color: #2ecc71; margin:0">إجمالي الأرباح المتوقعة</p>
+            <h2 style="margin:10px 0">0 د.ع</h2>
+        </div>
+        <button class="btn" style="background:#c0392b" onclick="clearData()">حذف جميع البيانات ⚠️</button>
         <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
     </div>
 
     <div id="settings" class="page card">
         <h3>الإعدادات</h3>
-        <p>مرحباً بك يا علي في لوحة التحكم الخاصة بك.</p>
+        <p>مرحباً يا علي، تم ربط تطبيقك بنجاح.</p>
+        <p>الإصدار: 1.0.5 Pro</p>
         <button class="btn" style="background:#444" onclick="showPage('main')">رجوع</button>
     </div>
 
     <script>
-        // إعدادات Firebase الخاصة بك
+        // تكوين Firebase الخاص بك
         const firebaseConfig = {
             apiKey: "AIzaSyAv3xsfgv6zzlBjrhy8Ji1Dj03SE1buqB0",
             authDomain: "az44-2cc0a.firebaseapp.com",
@@ -89,35 +98,51 @@
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+            window.scrollTo(0,0);
         }
 
-        async function saveData() {
-            const user = document.getElementById('userName').value;
-            const pts = document.getElementById('points').value;
-            if(!user || !pts) return alert("يرجى ملء الحقول");
-            await db.collection("sales").add({
-                user: user,
-                pts: pts,
-                time: Date.now(),
-                date: new Date().toLocaleDateString('ar-EG')
-            });
-            alert("تم الحفظ بنجاح ✅");
-            document.getElementById('userName').value = "";
-            document.getElementById('points').value = "";
-            showPage('main');
+        async function saveToFirebase() {
+            const user = document.getElementById('uName').value;
+            const pts = document.getElementById('uPoints').value;
+            if(!user || !pts) return alert("أرجوك يا علي أكمل البيانات أولاً");
+            
+            try {
+                await db.collection("sales").add({
+                    customer: user,
+                    points: parseInt(pts),
+                    timestamp: Date.now(),
+                    dateStr: new Date().toLocaleString('ar-EG')
+                });
+                alert("تم الحفظ بنجاح يا بطل! ✅");
+                document.getElementById('uName').value = "";
+                document.getElementById('uPoints').value = "";
+                showPage('main');
+            } catch (e) { alert("حدث خطأ في الاتصال"); }
         }
 
-        db.collection("sales").orderBy("time", "desc").onSnapshot(snap => {
+        // تحديث السجل تلقائياً
+        db.collection("sales").orderBy("timestamp", "desc").onSnapshot(snap => {
             let html = "";
             snap.forEach(doc => {
-                const s = doc.data();
-                html += `<div class="card" style="border-color:#333">
-                            <b>${s.user}</b>: ${s.pts} نقطة <br>
-                            <small style="color:gray">${s.date}</small>
+                const data = doc.data();
+                html += `<div class="card" style="border-right: 4px solid var(--primary)">
+                            <div style="display:flex; justify-content:space-between">
+                                <b>${data.customer}</b>
+                                <span style="color:var(--primary)">${data.points} نقطة</span>
+                            </div>
+                            <small style="color:gray; font-size:12px">${data.dateStr}</small>
                          </div>`;
             });
-            document.getElementById('list').innerHTML = html || "لا توجد مبيعات حالياً";
+            document.getElementById('logContent').innerHTML = html || "السجل فارغ حالياً";
         });
+
+        async function clearData() {
+            if(confirm("هل أنت متأكد من حذف جميع السجلات؟ لا يمكن التراجع!")) {
+                const res = await db.collection("sales").get();
+                res.forEach(doc => doc.ref.delete());
+                alert("تم التصفير بنجاح");
+            }
+        }
     </script>
 </body>
 </html>
